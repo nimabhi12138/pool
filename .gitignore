@@ -1,7 +1,7 @@
-package-lock.json
 node_modules/
-build/
-.idea/
+.env
 logs/
-website/
-*.swp
+docker/zano-data/
+docker/wallet/
+docker/config/config.json
+cmake-*.sh

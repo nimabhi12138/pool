@@ -1,23 +1,68 @@
-# Why node:8 and not node:10? Because (a) v8 is LTS, so more likely to be stable, and (b) "npm update" on node:10 breaks on Docker on Linux (but not on OSX, oddly)
-FROM node:8-slim
+FROM node:14.21.3-bullseye AS deps
+
+WORKDIR /pool
+
+# Install build toolchain for native addons
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       python3 \
+       python3-distutils \
+       git \
+       libboost-all-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Update npm to latest v6 to avoid known cb() issues
+RUN npm install -g npm@6.14.18
+
+COPY package*.json ./
+
+# npm 6 (bundled with Node 14) uses --production to prune dev deps
+ENV npm_config_build_from_source=true
+
+RUN npm config set python /usr/bin/python3 \
+    && npm config set fetch-retry-maxtimeout 120000 \
+    && npm config set fetch-retries 5 \
+    && npm ci --production \
+    && npm install --build-from-source cryptoforknote-util bignum
+
+COPY . .
+
+# Ensure native modules are rebuilt against the toolchain we installed
+RUN npm rebuild cryptoforknote-util --build-from-source \
+    && npm rebuild bignum --build-from-source
+
+
+FROM node:14.21.3-bullseye
+
+ENV NODE_ENV=production \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    TINI_VERSION=v0.19.0
+
+WORKDIR /pool
 
 RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs-legacy npm git libboost1.55-all libssl-dev \
-  && rm -rf /var/lib/apt/lists/* && \
-  chmod +x /wait-for-it.sh
+    && apt-get install -y --no-install-recommends \
+       tini \
+       libboost-chrono1.74.0 \
+       libboost-filesystem1.74.0 \
+       libboost-program-options1.74.0 \
+       libboost-system1.74.0 \
+       libboost-thread1.74.0 \
+       libboost-serialization1.74.0 \
+    && rm -rf /var/lib/apt/lists/*
 
-ADD . /pool/
-WORKDIR /pool/
+COPY --from=deps /pool /pool
 
-RUN npm update
+# Create non-root user to run the pool
+RUN useradd --system --create-home --home-dir /pool --shell /usr/sbin/nologin pool \
+    && chown -R pool:pool /pool
 
-RUN mkdir -p /config
+USER pool
 
-EXPOSE 8117
-EXPOSE 3333
-EXPOSE 5555
-EXPOSE 7777
+VOLUME ["/config", "/pool/logs"]
 
-VOLUME ["/config"]
+EXPOSE 3336 3337 3338 2117 2119
 
-CMD node init.js -config=/config/config.json
+ENTRYPOINT ["tini", "--"]
+CMD ["node", "init.js", "-config=/config/config.json"]

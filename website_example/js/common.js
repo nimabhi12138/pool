@@ -21,7 +21,10 @@ var docCookies = {
         return decodeURIComponent(document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + encodeURIComponent(sKey)
             .replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1")) || null;
     },
-    setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure=true) {
+    setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure) {
+        if (bSecure === undefined) {
+            bSecure = window.location.protocol === 'https:';
+        }
         if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) {
             return false;
         }
@@ -1959,6 +1962,8 @@ function workerstats_Setup (stats, api, addressTimeout, xhrAddressPoll, xhrGetPa
                 .val()
                 .trim();
 
+            console.log(`Lookup clicked for ${stats.config.coin}`, address);
+
             if (getCurrentAddress(stats.config.coin) != address) {
                 docCookies.setItem(`mining_address_${stats.config.coin}`, address, Infinity);
 
@@ -2007,6 +2012,7 @@ function workerstats_Setup (stats, api, addressTimeout, xhrAddressPoll, xhrGetPa
             workerstats_FetchAddressStats(false, stats, api, xhrAddressPoll);
 
         });
+    console.log(`Lookup handler bound for ${stats.config.coin}`);
 
     var address = getCurrentAddress(stats.config.coin);
     if (address) {
@@ -2091,6 +2097,7 @@ function workerstats_Setup (stats, api, addressTimeout, xhrAddressPoll, xhrGetPa
 function workerstats_FetchAddressStats (longpoll, stats, api, xhrAddressPoll) {
     let address = getCurrentAddress(stats.config.coin)
     if (address) {
+        console.log(`Requesting stats_address for ${stats.config.coin}`, address, api);
         xhrAddressPoll[stats.config.coin] = $.ajax({
             url: `${api}/stats_address`,
             data: {
@@ -2218,6 +2225,7 @@ function workerstats_FetchAddressStats (longpoll, stats, api, xhrAddressPoll) {
             },
             error: function (e) {
                 if (e.statusText === 'abort') return;
+                console.error('stats_address error', e.statusText, e);
                 $(`#addressError${stats.config.coin}`)
                     .text('Connection error')
                     .show();
@@ -3105,4 +3113,3 @@ function home_InitTemplate (parentStats, siblingStats) {
 
     updateText(`currentEffort${coin}`, (parentStats.pool.roundHashes / parentStats.network.difficulty * 100).toFixed(1) + '%');
 }
-

@@ -1,4 +1,4 @@
-var api = "https://testv2.smartcoinpool.net/api";
+var api = "http://192.168.100.37:2117";
 let parentCoin = "Zano"
 
 let byteUnits = [' H', ' KH', ' MH', ' GH', ' TH', ' PH', 'EH', 'ZH', 'YH']

@@ -158,6 +158,28 @@ cd pool
 npm update
 ```
 
+#### Docker Compose (optional)
+
+A ready-to-use `docker-compose.yml` bundles the pool, Redis, a `zanod`
+full node, and the wallet RPC interface. Follow the steps in
+[`DOCKER_COMPOSE.md`](DOCKER_COMPOSE.md) to copy your configuration,
+provide wallet files, and start the stack:
+
+```bash
+cp .env.example .env    # customise wallet filename/password
+mkdir -p docker/config docker/wallet docker/zano-data
+cp config.json docker/config/config.json
+docker compose up -d
+```
+
+在 `.env`（或通过 `ENV_FILE` 指定的绝对路径）中配置镜像标签、钱包
+文件/密码、矿池钱包地址(`POOL_ADDRESS`)、区块/钱包数据目录，以及与外部 Redis 互通所需的网络
+（默认 `backend_default`）。然后调整 `docker/config/config.json`
+中的 `daemon.host`、`wallet.host`、`redis.host`，确保它们与
+Compose 服务名一致（`zanod`、`wallet-rpc`、`easyhash-redis`
+等）。如 Redis 位于其他 Compose 栈，请先确认网络名称并将
+`REDIS_NETWORK` 改成对应值。
+
 #### 2) Configuration
 
 Use the `config.json` mainnet or `config-test.json` then overview each options and change any to match your preferred setup.

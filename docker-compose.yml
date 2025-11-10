@@ -1,0 +1,107 @@
+version: "3.9"
+
+services:
+  zanod:
+    image: ${ZANOD_IMAGE:-zano/zanod:latest}
+    container_name: zanod
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-.env}
+    command:
+      [
+        "./zanod",
+        "--disable-upnp",
+        "--rpc-bind-ip=0.0.0.0",
+        "--rpc-bind-port=${POOL_DAEMON_PORT:-11211}",
+        "--p2p-bind-ip=0.0.0.0",
+        "--p2p-bind-port=${ZANOD_P2P_PORT:-11121}",
+        "--log-level=0"
+      ]
+    volumes:
+      - ${ZANOD_DATA_DIR:-./docker/zano-data}:/home/zano/.Zano
+    ports:
+      - "${ZANOD_P2P_PORT:-11121}:${ZANOD_P2P_PORT:-11121}"
+      - "${POOL_DAEMON_PORT:-11211}:${POOL_DAEMON_PORT:-11211}"
+    networks:
+      - pool
+
+  wallet-rpc:
+    image: ${ZANOD_IMAGE:-zano/zanod:latest}
+    container_name: zano-wallet-rpc
+    restart: unless-stopped
+    depends_on:
+      zanod:
+        condition: service_started
+    env_file:
+      - ${ENV_FILE:-.env}
+    volumes:
+      - ${WALLET_DATA_DIR:-./docker/wallet}:/home/zano/wallet
+    ports:
+      - "${WALLET_RPC_BIND_PORT:-39996}:${WALLET_RPC_BIND_PORT:-39996}"
+    entrypoint: []
+    command:
+      [
+        "./simplewallet",
+        "--wallet-file",
+        "/home/zano/wallet/${WALLET_FILE}",
+        "--password",
+        "${WALLET_PASSWORD}",
+        "--rpc-bind-ip=0.0.0.0",
+        "--rpc-bind-port",
+        "${WALLET_RPC_BIND_PORT:-39996}",
+        "--daemon-host",
+        "zanod",
+        "--daemon-port",
+        "${POOL_DAEMON_PORT:-11211}",
+        "--log-file",
+        "/home/zano/wallet/simplewallet.log"
+      ]
+    networks:
+      - pool
+
+  pool:
+    image: ${POOL_IMAGE:-zano/pool:latest}
+    container_name: zano-pool
+    restart: unless-stopped
+    depends_on:
+      zanod:
+        condition: service_started
+      wallet-rpc:
+        condition: service_started
+    env_file:
+      - ${ENV_FILE:-.env}
+    environment:
+      NODE_ENV: production
+      POOL_REDIS_HOST: ${POOL_REDIS_HOST:-easyhash-redis}
+      POOL_REDIS_PORT: ${POOL_REDIS_PORT:-6379}
+      POOL_REDIS_DB: ${POOL_REDIS_DB:-11}
+      POOL_REDIS_AUTH: ${POOL_REDIS_AUTH:-}
+      POOL_DAEMON_HOST: ${POOL_DAEMON_HOST:-zanod}
+      POOL_DAEMON_PORT: ${POOL_DAEMON_PORT:-11211}
+      POOL_WALLET_HOST: ${POOL_WALLET_HOST:-wallet-rpc}
+      POOL_WALLET_PORT: ${WALLET_RPC_BIND_PORT:-39996}
+      POOL_ADDRESS: ${POOL_ADDRESS:-}
+    volumes:
+      - ${POOL_CONFIG_DIR:-./docker/config}:/config:ro
+      - pool-logs:/pool/logs
+    ports:
+      - "3336:3336"
+      - "3337:3337"
+      - "3338:3338"
+      - "2117:2117"
+      - "2119:2119"
+    command: ["node", "init.js", "-config=/config/config.json"]
+    networks:
+      - pool
+      - redis
+
+volumes:
+  pool-logs:
+    driver: local
+
+networks:
+  pool:
+    driver: bridge
+  redis:
+    external: true
+    name: ${REDIS_NETWORK:-backend_default}

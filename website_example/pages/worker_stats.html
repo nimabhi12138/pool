@@ -124,6 +124,7 @@
 <script>
 
 let xhrGetPayments = {}
+let xhrGetBlockRewards = {}
 let xhrAddressPoll = {}
 let addressTimeout = {}
 let ranOnce = false
@@ -159,7 +160,7 @@ currentPage = {
 
         if (xhrGetPayments) {
             Object.keys(xhrGetPayments).forEach(key => {
-                if (xhrGetPayments[key])
+            if (xhrGetPayments[key])
                     xhrGetPayments[key].abort();
             })
         }
@@ -202,6 +203,11 @@ $(function() {
 });
 
 
-workerstats_InitTemplate(ranOnce, addressTimeout, xhrAddressPoll)
+try {
+    console.log('Initializing worker stats page', lastStats && lastStats.config ? lastStats.config.coin : 'unknown coin');
+    workerstats_InitTemplate(ranOnce, addressTimeout, xhrAddressPoll, xhrGetPayments, xhrGetBlockRewards)
+} catch (err) {
+    console.error('workerstats_InitTemplate failed', err);
+}
 
 </script>

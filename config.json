@@ -37,7 +37,7 @@
         "enabled": true,
         "mergedMining": false,
         "clusterForks": 3,
-        "poolAddress": "** pool wallet **",
+        "poolAddress": "ZxCqkSv1JvRjkNDHobrSHFXcb5smThVDaMJrtmXoW857KqShqBjdtGJdu2iiotHoUnRkQKWjSkujYc2fNe39CqPG22pY1qDzE",
         "intAddressPrefix": null,
         "blockRefreshInterval": 1000,
         "minerTimeout": 900,
@@ -84,7 +84,7 @@
             "penalty": 30
         },
         "banning": {
-            "enabled": true,
+            "enabled": false,
             "time": 600,
             "invalidPercent": 25,
             "checkThreshold": 30
@@ -156,7 +156,7 @@
     },
 
     "redis": {
-        "host": "127.0.0.1",
+        "host": "easyhash-redis",
         "port": 6379,
         "auth": null,
         "db": 11,
